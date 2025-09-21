@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrowdSense VIT - Campus Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            max-width: 430px;
+            margin: 0 auto;
+            background: linear-gradient(145deg, #1a1a2e, #0f0f23);
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        /* Header with Profile */
+        .header {
+            background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%);
+            padding: 50px 20px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .profile-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: 3px solid rgba(255,255,255,0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .profile-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .notification-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .app-title {
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .app-title h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            background: linear-gradient(135deg, #fff, #a8edea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .app-title p {
+            opacity: 0.8;
+            font-size: 14px;
+            font-weight: 300;
+        }
+
+        /* Profile Sidebar */
+        .profile-sidebar {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 300px;
+            height: 100vh;
+            background: linear-gradient(145deg, #1a1a2e, #16213e);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .profile-sidebar.open {
+            left: 0;
+        }
+
+        .profile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .profile-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .profile-header {
+            padding: 60px 30px 30px;
+            text-align: center;
+            background: linear-gradient(135deg, #2d1b69, #11998e);
+            position: relative;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            border: 4px solid rgba(255,255,255,0.2);
+        }
+
+        .profile-info h3 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .profile-info p {
+            opacity: 0.7;
+            font-size: 14px;
+        }
+
+        .profile-menu {
+            padding: 20px 0;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .menu-item:hover {
+            background: rgba(255,255,255,0.05);
+            transform: translateX(10px);
+        }
+
+        .menu-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+            opacity: 0.7;
+        }
+
+        /* Main Map Container */
+        .map-container {
+            height: 450px;
+            margin: 20px;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .vit-map {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            position: relative;
+            background-image: 
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* VIT Campus Buildings */
+        .building {
+            position: absolute;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+
+        .building:hover {
+            background: rgba(255,255,255,0.15);
+            transform: scale(1.05);
+        }
+
+        .building-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: rgba(255,255,255,0.7);
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        /* Crowd Gradient Overlays */
+        .crowd-overlay {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: pulse 3s infinite;
+        }
+
+        .crowd-overlay.high {
+            background: radial-gradient(circle, rgba(244,67,54,0.4) 0%, rgba(244,67,54,0.1) 50%, transparent 100%);
+        }
+
+        .crowd-overlay.medium {
+            background: radial-gradient(circle, rgba(255,193,7,0.4) 0%, rgba(255,193,7,0.1) 50%, transparent 100%);
+        }
+
+        .crowd-overlay.low {
+            background: radial-gradient(circle, rgba(76,175,80,0.4) 0%, rgba(76,175,80,0.1) 50%, transparent 100%);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            padding: 20px;
+            gap: 15px;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 15px 10px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(135deg, #2d1b69, #11998e);
+            border-color: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(45, 27, 105, 0.3);
+        }
+
+        .nav-tab-icon {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .nav-tab-text {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        /* Content Sections */
+        .content-section {
+            display: none;
+            padding: 0 20px 20px;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        /* Parking Section */
+        .parking-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .parking-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .parking-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .parking-card.available {
+            border-color: rgba(76,175,80,0.5);
+        }
+
+        .parking-card.limited {
+            border-color: rgba(255,193,7,0.5);
+        }
+
+        .parking-card.full {
+            border-color: rgba(244,67,54,0.5);
+            opacity: 0.6;
+        }
+
+        .parking-icon {
+            font-size: 30px;
+            margin-bottom: 10px;
+        }
+
+        .parking-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .parking-status {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .parking-spots {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .book-btn {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #2d1b69, #11998e);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .book-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .book-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Live Activity Feed */
+        .activity-feed {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 16px;
+        }
+
+        .activity-info {
+            flex: 1;
+        }
+
+        .activity-text {
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .activity-time {
+            font-size: 11px;
+            opacity: 0.6;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #2d1b69, #11998e);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 25px;
+            font-weight: 500;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: all 0.4s ease;
+            z-index: 1001;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(10px);
+        }
+
+        /* Responsive Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Profile Overlay -->
+        <div class="profile-overlay" id="profileOverlay" onclick="closeProfile()"></div>
+        
+        <!-- Profile Sidebar -->
+        <div class="profile-sidebar" id="profileSidebar">
+            <div class="profile-header">
+                <div class="profile-avatar">AS</div>
+                <div class="profile-info">
+                    <h3>Alex Student</h3>
+                    <p>VIT Student • 21BCE1234</p>
+                </div>
+            </div>
+            <div class="profile-menu">
+                <div class="menu-item" onclick="handleMenuClick('account')">
+                    <div class="menu-icon">👤</div>
+                    <span>Account Settings</span>
+                </div>
+                <div class="menu-item" onclick="handleMenuClick('notifications')">
+                    <div class="menu-icon">🔔</div>
+                    <span>Notifications</span>
+                </div>
+                <div class="menu-item" onclick="handleMenuClick('privacy')">
+                    <div class="menu-icon">🔒</div>
+                    <span>Privacy Settings</span>
+                </div>
+                <div class="menu-item" onclick="handleMenuClick('bookings')">
+                    <div class="menu-icon">📅</div>
+                    <span>My Bookings</span>
+                </div>
+                <div class="menu-item" onclick="handleMenuClick('analytics')">
+                    <div class="menu-icon">📊</div>
+                    <span>Usage Analytics</span>
+                </div>
+                <div class="menu-item" onclick="handleMenuClick('feedback')">
+                    <div class="menu-icon">💬</div>
+                    <span>Send Feedback</span>
+                </div>
+                <div class="menu-item" onclick="handleMenuClick('about')">
+                    <div class="menu-icon">ℹ️</div>
+                    <span>About CrowdSense</span>
+                </div>
+                <div class="menu-item" onclick="handleMenuClick('logout')">
+                    <div class="menu-icon">🚪</div>
+                    <span>Logout</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <div class="header">
+            <div class="top-nav">
+                <div class="profile-btn" onclick="openProfile()">AS</div>
+                <button class="notification-btn">🔔</button>
+            </div>
+            <div class="app-title">
+                <h1>CrowdSense VIT</h1>
+                <p>Real-time campus crowd intelligence</p>
+            </div>
+        </div>
+
+        <!-- Main Map -->
+        <div class="map-container">
+            <div class="vit-map" id="vitMap">
+                <!-- VIT Campus Buildings will be dynamically added -->
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="switchTab('live')" data-tab="live">
+                <div class="nav-tab-icon">🎯</div>
+                <div class="nav-tab-text">Live Feed</div>
+            </div>
+            <div class="nav-tab" onclick="switchTab('parking')" data-tab="parking">
+                <div class="nav-tab-icon">🚗</div>
+                <div class="nav-tab-text">Parking</div>
+            </div>
+            <div class="nav-tab" onclick="switchTab('report')" data-tab="report">
+                <div class="nav-tab-icon">📝</div>
+                <div class="nav-tab-text">Report</div>
+            </div>
+        </div>
+
+        <!-- Content Sections -->
+        <div class="content-section active" id="liveSection">
+            <h3 style="margin-bottom: 15px; opacity: 0.9;">Live Campus Activity</h3>
+            <div class="activity-feed" id="activityFeed">
+                <!-- Activity items will be dynamically added -->
+            </div>
+        </div>
+
+        <div class="content-section" id="parkingSection">
+            <h3 style="margin-bottom: 15px; opacity: 0.9;">Available Parking Lots</h3>
+            <div class="parking-grid" id="parkingGrid">
+                <!-- Parking cards will be dynamically added -->
+            </div>
+        </div>
+
+        <div class="content-section" id="reportSection">
+            <h3 style="margin-bottom: 15px; opacity: 0.9;">Report Crowd Status</h3>
+            <div style="background: rgba(255,255,255,0.05); border-radius: 15px; padding: 20px; border: 1px solid rgba(255,255,255,0.1);">
+                <p style="margin-bottom: 15px; opacity: 0.8;">Help keep the community informed about current crowd levels</p>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button class="report-btn" data-status="low">🟢 Free</button>
+                    <button class="report-btn" data-status="medium">🟡 Moderate</button>
+                    <button class="report-btn" data-status="high">🔴 Crowded</button>
+                </div>
+                <button class="submit-btn" onclick="submitReport()">Submit Report</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // VIT Campus Data (mock)
+        const vitBuildings = [
+            { id: 'library', name: 'Central Library', x: 100, y: 80, width: 60, height: 40, crowd: 25, status: 'low' },
+            { id: 'smv', name: 'SMV', x: 200, y: 80, width: 80, height: 50, crowd: 65, status: 'medium' },
+            { id: 'sjt', name: 'SJT', x: 320, y: 80, width: 70, height: 45, crowd: 85, status: 'high' },
+            { id: 'cafeteria', name: 'Cafeteria', x: 50, y: 180, width: 90, height: 50, crowd: 75, status: 'high' },
+            { id: 'gym', name: 'Gymnasium', x: 180, y: 200, width: 70, height: 40, crowd: 40, status: 'medium' },
+            { id: 'auditorium', name: 'Main Auditorium', x: 280, y: 180, width: 100, height: 60, crowd: 15, status: 'low' },
+            { id: 'lab', name: 'Lab Complex', x: 120, y: 300, width: 80, height: 50, crowd: 55, status: 'medium' },
+            { id: 'hostel', name: 'Hostel Block', x: 300, y: 320, width: 70, height: 80, crowd: 90, status: 'high' }
+        ];
+
+        const parkingLots = [
+            { id: 'p1', name: 'Main Gate Parking', available: 25, total: 50, status: 'available' },
+            { id: 'p2', name: 'Library Parking', available: 8, total: 30, status: 'limited' },
+            { id: 'p3', name: 'Hostel Parking', available: 0, total: 40, status: 'full' },
+            { id: 'p4', name: 'Academic Block', available: 15, total: 35, status: 'available' },
+            { id: 'p5', name: 'Sports Complex', available: 32, total: 45, status: 'available' },
+            { id: 'p6', name: 'Staff Parking', available: 3, total: 25, status: 'limited' }
+        ];
+
+        let selectedStatus = null;
+
+        // Initialize app
+        function initApp() {
+            renderVITMap();
+            renderActivityFeed();
+            renderParkingGrid();
+            setupReportButtons();
+            startRealTimeUpdates();
+        }
+
+        // Render VIT Campus Map
+        function renderVITMap() {
+            const vitMap = document.getElementById('vitMap');
+            vitMap.innerHTML = '';
+
+            vitBuildings.forEach(building => {
+                // Create building element
+                const buildingEl = document.createElement('div');
+                buildingEl.className = 'building';
+                buildingEl.style.left = building.x + 'px';
+                buildingEl.style.top = building.y + 'px';
+                buildingEl.style.width = building.width + 'px';
+                buildingEl.style.height = building.height + 'px';
+                buildingEl.onclick = () => showBuildingInfo(building);
+
+                // Create building label
+                const labelEl = document.createElement('div');
+                labelEl.className = 'building-label';
+                labelEl.textContent = building.name;
+                buildingEl.appendChild(labelEl);
+
+                // Create crowd overlay
+                const overlaySize = Math.max(building.width, building.height) + 40;
+                const overlayEl = document.createElement('div');
+                overlayEl.className = `crowd-overlay ${building.status}`;
+                overlayEl.style.left = (building.x + building.width/2 - overlaySize/2) + 'px';
+                overlayEl.style.top = (building.y + building.height/2 - overlaySize/2) + 'px';
+                overlayEl.style.width = overlaySize + 'px';
+                overlayEl.style.height = overlaySize + 'px';
+
+                vitMap.appendChild(overlayEl);
+                vitMap.appendChild(buildingEl);
+            });
+        }
+
+        // Render Activity Feed
+        function renderActivityFeed() {
+            const activityFeed = document.getElementById('activityFeed');
+            const activities = [
+                { icon: '🏃', bg: 'rgba(76,175,80,0.2)', text: 'Library crowd decreased', time: '2 min ago' },
+                { icon: '👥', bg: 'rgba(255,193,7,0.2)', text: 'SMV getting busier', time: '3 min ago' },
+                { icon: '🚗', bg: 'rgba(33,150,243,0.2)', text: 'New parking spot available', time: '5 min ago' },
+                { icon: '📊', bg: 'rgba(156,39,176,0.2)', text: 'Peak hours analysis updated', time: '8 min ago' },
+                { icon: '🔔', bg: 'rgba(244,67,54,0.2)', text: 'Cafeteria crowd alert', time: '12 min ago' }
+            ];
+
+            activityFeed.innerHTML = activities.map(activity => `
+                <div class="activity-item">
+                    <div class="activity-icon" style="background: ${activity.bg};">${activity.icon}</div>
+                    <div class="activity-info">
+                        <div class="activity-text">${activity.text}</div>
+                        <div class="activity-time">${activity.time}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Parking Grid
+        function renderParkingGrid() {
+            const parkingGrid = document.getElementById('parkingGrid');
+            parkingGrid.innerHTML = parkingLots.map(lot => `
+                <div class="parking-card ${lot.status}" onclick="bookParking('${lot.id}')">
+                    <div class="parking-icon">🚗</div>
+                    <div class="parking-name">${lot.name}</div>
+                    <div class="parking-spots">${lot.available}/${lot.total}</div>
+                    <div class="parking-status">${lot.status.charAt(0).toUpperCase() + lot.status.slice(1)}</div>
+                    <button class="book-btn" ${lot.status === 'full' ? 'disabled' : ''}>
+                        ${lot.status === 'full' ? 'Full' : 'Book Now'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Profile functions
+        function openProfile() {
+            document.getElementById('profileSidebar').classList.add('open');
+            document.getElementById('profileOverlay').classList.add('show');
+        }
+
+        function closeProfile() {
+            document.getElementById('profileSidebar').classList.remove('open');
+            document.getElementById('profileOverlay').classList.remove('show');
+        }
+
+        function handleMenuClick(action) {
+            showNotification(`${action.charAt(0).toUpperCase() + action.slice(1)} - Coming soon!`);
+            closeProfile();
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+            // Update content sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(tabName + 'Section').classList.add('active');
+        }
+
+        // Setup report buttons
+        function setupReportButtons() {
+            const reportBtns = document.querySelectorAll('.report-btn');
+            reportBtns.forEach(btn => {
+                btn.onclick = () => {
+                    reportBtns.forEach(b => b.style.background = 'rgba(255,255,255,0.1)');
+                    btn.style.background = 'linear-gradient(135deg, #2d1b69, #11998e)';
+                    selectedStatus = btn.dataset.status;
+                };
+            });
+        }
+
+        // Building info
+        function showBuildingInfo(building) {
+            const statusText = {
+                'low': 'Free to visit',
+                'medium': 'Moderately busy',
+                'high': 'Very crowded'
+            };
+            showNotification(`${building.name}: ${building.crowd} people - ${statusText[building.status]}`);
+        }
+
+        // Book parking
+        function bookParking(lotId) {
+            const lot = parkingLots.find(p => p.id === lotId);
+            if (lot && lot.status !== 'full') {
+                showNotification(`Booking confirmed for ${lot.name}!`);
+                // Here you would integrate with Firebase to handle the booking
+                // firebaseBookParking(lotId, userId);
+            }
+        }
+
+        // Submit report
+        function submitReport() {
+            if (!selectedStatus) {
+                showNotification('Please select a crowd status first!', 'error');
+                return;
+            }
+
+            // Simulate reporting to Firebase
+            const reportData = {
+                status: selectedStatus,
+                timestamp: new Date().toISOString(),
+                userId: 'user123', // This would come from Firebase Auth
+                location: 'current' // This would come from GPS
+            };
+
+            // Here's where you'd integrate with Firebase:
+            // firebase.firestore().collection('crowdReports').add(reportData);
+            
+            showNotification('Thank you for your report! 🎉');
+            
+            // Reset selection
+            document.querySelectorAll('.report-btn').forEach(btn => {
+                btn.style.background = 'rgba(255,255,255,0.1)';
+            });
+            selectedStatus = null;
+        }
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.background = type === 'error' ? 
+                'linear-gradient(135deg, #f44336, #d32f2f)' : 
+                'linear-gradient(135deg, #2d1b69, #11998e)';
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3500);
+        }
+
+        // Real-time updates simulation
+        function startRealTimeUpdates() {
+            setInterval(() => {
+                // Simulate crowd changes
+                vitBuildings.forEach(building => {
+                    const change = Math.floor(Math.random() * 20) - 10;
+                    building.crowd = Math.max(0, Math.min(100, building.crowd + change));
+                    
+                    // Update status based on crowd
+                    if (building.crowd < 30) building.status = 'low';
+                    else if (building.crowd < 70) building.status = 'medium';
+                    else building.status = 'high';
+                });
+
+                // Simulate parking changes
+                parkingLots.forEach(lot => {
+                    if (Math.random() < 0.3) { // 30% chance of change
+                        const change = Math.floor(Math.random() * 6) - 3;
+                        lot.available = Math.max(0, Math.min(lot.total, lot.available + change));
+                        
+                        if (lot.available === 0) lot.status = 'full';
+                        else if (lot.available < lot.total * 0.3) lot.status = 'limited';
+                        else lot.status = 'available';
+                    }
+                });
+
+                // Re-render
+                renderVITMap();
+                if (document.getElementById('parkingSection').classList.contains('active')) {
+                    renderParkingGrid();
+                }
+            }, 5000); // Update every 5 seconds
+        }
+
+        // Firebase Integration Points (for reference)
+        /*
+        // Initialize Firebase (you'll need to add this to your project)
+        const firebaseConfig = {
+            apiKey: "your-api-key",
+            authDomain: "crowdsense-vit.firebaseapp.com",
+            projectId: "crowdsense-vit",
+            storageBucket: "crowdsense-vit.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "your-app-id"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const messaging = firebase.messaging();
+
+        // Real-time crowd data listener
+        function setupFirebaseListeners() {
+            db.collection('crowdData').onSnapshot((snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added' || change.type === 'modified') {
+                        const data = change.doc.data();
+                        updateBuildingCrowd(data.buildingId, data.crowdLevel);
+                    }
+                });
+            });
+        }
+
+        // Submit crowd report to Firebase
+        function submitCrowdReport(buildingId, crowdLevel) {
+            return db.collection('crowdReports').add({
+                buildingId: buildingId,
+                crowdLevel: crowdLevel,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                userId: firebase.auth().currentUser.uid
+            });
+        }
+
+        // Book parking slot
+        function bookParkingSlot(lotId, userId) {
+            return db.collection('parkingBookings').add({
+                lotId: lotId,
+                userId: userId,
+                bookingTime: firebase.firestore.FieldValue.serverTimestamp(),
+                status: 'active'
+            });
+        }
+
+        // Setup push notifications
+        function setupPushNotifications() {
+            messaging.requestPermission().then(() => {
+                return messaging.getToken();
+            }).then((token) => {
+                // Send token to server
+                db.collection('userTokens').doc(firebase.auth().currentUser.uid).set({
+                    token: token
+                });
+            });
+        }
+        */
+
+        // Initialize app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+
+    <style>
+        .report-btn {
+            flex: 1;
+            padding: 15px 10px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .report-btn:hover {
+            background: rgba(255,255,255,0.15);
+            transform: translateY(-2px);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #2d1b69, #11998e);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(45, 27, 105, 0.4);
+        }
+    </style>
+</body>
+</html>
